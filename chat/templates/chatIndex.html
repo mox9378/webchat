@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% block css %}
+    <style type="text/css">
+        #contact,#chat_dialog{
+            height: 600px;
+        }
+        .clearboth{
+            clear: both;
+        }
+    .hide{
+        display: none;
+    }
+    </style>
+
+{% endblock %}
+{% block content %}
+    <div class="container" id="chat_window">
+        <div class="row">
+            <div class="col-sm-3" id="contact" class="dia_cfg" style="border:1px solid gainsboro;border-radius:5px;margin: 0;padding: 0;">
+                <div style="width: 100%;height: 40px;margin:0;padding:0;" id="chat_type">
+                    <a class="btn btn-default active" style="display: inline-block;width:33%;height: 100%;float: left">Contact</a>
+                    <a class="btn btn-default" style="display: inline-block;width:33%;height: 100%;float: left;">Group</a>
+                    <a class="btn btn-default" style="display: inline-block;width:34%;height: 100%;float: left;">All</a>
+                </div>
+                <div class="list-group" id="contact_list">
+                    {% for item in contact_list %}
+                        <a href="javascript:void(0)" class="list-group-item"><span class="badge"></span><span>{{ item.username }}</span><span class="hide" uid="{{ item.id }}"></span></a>
+                    {% endfor %}
+                </div>
+                <div class="list-group hide" id="group_list">
+                    {% for item in group_list %}
+                        <a href="javascript:void(0)" class="list-group-item"><span class="badge"></span><span>{{ item.group_name }}</span><span class="hide" uid="{{ item.id }}"></span></a>
+                    {% endfor %}
+                </div>
+            <!-- all public contact -->
+                <div class="list-group hide" id="people_list">
+                    {% for item in all_people %}
+                        <a href="javascript:void(0)" class="list-group-item"><span>{{ item.username }}</span><span class="hide" uid="{{ item.id }}"></span></a>
+                    {% endfor %}
+                </div>
+            </div>
+            <!-- main-window -->
+            <div class="col-sm-9" id="chat_dialog" class="dia_cfg" style="padding: 0;">
+                <div class="panel panel-default" style="margin-bottom:0px;">
+                  <div class="panel-heading">Panel heading without title</div>
+                  <div class="panel-body" style="height: 400px;padding:0px">
+                    <div  id="talked" style="height: 400px;overflow: auto;">
+
+                    </div>
+                  </div>
+                </div>
+                <div class="panel panel-info" style="margin-bottom:0px;">
+                    <div class="panel-heading">emoj</div>
+                    <div class="panel-body" style="height: 115px;padding:0px;">
+                        <textarea style="width: 750px;height: 100%;resize:none;" disabled></textarea>
+                        <a type="button" class="btn btn-lg btn-success" onclick="refresh();" style="float: right;margin:30px 25px ">发送</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="clearboth"></div>
+{% endblock %}
+
+{% block js %}
+    <script>
+        //document ready
+        $('document').ready(function () {
+            refresh();
+            $($("#chat_type a")[0]).addClass('active');
+            $($("#chat_type a")[0]).addClass('btn-info');
+            $("#chat_type a").click(function () {
+                var type = $(this).text();
+                var obj = $("#chat_type a");
+                $("#chat_type a").removeClass('active');
+                $("#chat_type a").removeClass('btn-info');
+                if(type=='Contact'){
+                    obj[0].classList.add('active','btn-info');
+                    $("#contact_list").removeClass('hide');
+                    $("#group_list").addClass('hide');
+                    $("#people_list").addClass('hide');
+                }else if(type=='Group'){
+                    obj[1].classList.add('active','btn-info');
+                    $("#contact_list").addClass('hide');
+                    $("#group_list").removeClass('hide');
+                    $("#people_list").addClass('hide');
+                }else{
+                    obj[2].classList.add('active','btn-info');
+                    $("#contact_list").addClass('hide');
+                    $("#group_list").addClass('hide');
+                    $("#people_list").removeClass('hide');
+                }
+            });
+            $('body').delegate("textarea",'keydown',function(e){
+                if(e.which == 13){
+                    var msg_text = $('textarea').val();
+                    if($.trim(msg_text).length > 0){
+                        var dated = new Date();
+                        txt = "<div style='text-align:center;'><span>"+dated.getFullYear()+'-'+(dated.getMonth()+1)+'-'+dated.getDate()+' '+dated.getHours()+':'+dated.getMinutes()+':'+dated.getSeconds()+"</span><br/></div><div style='text-align:right;'><span class=''>&nbsp;</span><div class='label label-warning' style='font-size:16px;'>"+msg_text+"</div></div>";
+                        $('#talked').append(txt);
+                        $('textarea').val('');
+                        sendMsg(null,msg_text);
+                    }
+                    $("#talked").animate({
+                    "scrollTop":$('#talked')[0].scrollHeight},500);
+                }
+            });
+            setInterval(getMsg,10000);
+        })
+        
+        
+    function updateMsgTips(response) {
+        console.log(response);
+    }
+    function getMsg() {
+        $.ajax({
+                url:'/webchat/getMsg/',
+                type:'post',
+                data:{},
+                success:function (response) {
+                    //success
+                },
+                error:function (response) {
+                    //error, timeout
+
+                }
+
+
+            })
+    }
+    function SelObj(ths) {
+         var name = $($(ths).find('span')[1]).text();
+        $('#contact_list a,#group_list a,#people_list a').removeClass('active');
+        $(ths).addClass('active');
+        $($('#chat_dialog').find('.panel-heading')[0]).text('正在与 '+name+' 聊天...')
+        $('textarea').removeAttr('disabled')
+     }
+    //send msg
+    function sendMsg(response,msg){
+            //send message to server
+        if(response){
+            if(response['flag']){
+                $('#talked div:last-child div').removeClass('label-warning');
+                $('#talked div:last-child div').addClass('btn-info');
+                //glyphicon glyphicon-ok
+                $('#talked div:last-child span').addClass('glyphicon glyphicon-ok');
+            }
+        }else{
+            methodUrl='/webchat/sendmsg/';
+            data = {
+
+                'from':$.cookie('uid'),
+                'to':$($('#contact_list').find('.active').find('span')[2]).attr('uid'),
+                'msg':msg
+            };
+            subEvent('post',methodUrl,data);
+        }
+
+    }
+
+    // refresh contact/group/all
+    function refresh(response) {
+        if(response){
+            $('#contact_list,#group_list,#people_list').html('');
+            contact_list = response['contact_list'];
+            group_list = response['group_list'];
+            people_list = response['people_list'];
+            for(var i=0;i<contact_list.length;i++){
+                tmp = '<a href="javascript:void(0)" class="list-group-item" onclick="SelObj(this);"><span class="badge"></span><span>'+contact_list[i]['username']+'</span><span class="hide" uid="'+contact_list[i]['id']+'"></span></a>';
+                $('#contact_list').append(tmp);
+            }
+            for(var i=0;i<group_list.length;i++){
+                tmp = '<a href="javascript:void(0)" class="list-group-item" onclick="SelObj(this);"><span class="badge"></span><span>'+group_list[i]['group_name']+'</span><span class="hide" uid="'+group_list[i]['id']+'"></span></a>';
+                $('#group_list').append(tmp);
+            }
+            for(var i=0;i<people_list.length;i++){
+                tmp = '<a href="javascript:void(0)" class="list-group-item" onclick="Detail(this);"><span class="badge"></span><span>'+people_list[i]['username']+'</span><span class="hide" uid="'+people_list[i]['id']+'"></span></a>';
+                $('#people_list').append(tmp);
+            }
+            //<a href="javascript:void(0)" class="list-group-item"><span class="badge"></span><span>{{ item.username }}</span><span class="hide" uid="{{ item.id }}"></span></a>
+        }else{
+            methodUrl = '/webchat/refresh/';
+            data={};
+            subEvent('post',methodUrl,data);
+        }
+
+
+    }
+    </script>
+
+{% endblock %}

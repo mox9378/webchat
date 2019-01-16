@@ -1,0 +1,116 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+<link rel="stylesheet" href="{% static 'chat/bootstrap3/css/bootstrap.css' %}" />
+<script src="{% static 'chat/js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'chat/bootstrap3/js/bootstrap.min.js' %}"></script>
+<script src="{% static 'chat/js/jquery.cookie.js' %}"></script>
+    {% block title %}<title>base</title>{% endblock %}
+    {% block css %}{% endblock %}
+</head>
+<body>
+<nav class="navbar navbar-default">
+    <ul class="nav navbar-nav">
+        <!--<li><a href="#">Home</a></li>
+        <li><a href="#">Program</a></li>-->
+        <li class="active"><a href="#">webChat</a></li>
+        </ul>
+    <ul id="signs" class="nav navbar-nav navbar-right" style="padding-right: 50px;">
+        <li ><a href="#" onclick="showDlg(this);" value="signin">登陆</a></li>
+        <li ><a href="#" onclick="showDlg(this);" value="signup">注册</a></li>
+    </ul>
+</nav>
+<div class="modal" id="signin">
+    <!-- for login dialog -->
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close"
+                 data-dismiss="modal" onclick="clsDialog();">
+                 <span>×</span>
+                 </button>
+                <h4 class="modal-title">会员登陆</h4>
+            </div>
+            <div class="modal-body" style="padding-left: 100px;">
+                <div class="input-group" style="padding-bottom:10px;">
+                    <span class="input-group-addon" id="basic-addon1" style="padding-bottom:10px;width:100px;">用户名:</span>
+                    <input type="text" class="form-control" aria-describedby="basic-addon1" id="username" placeholder="输入要登陆的用户名..."  style="width:300px;" />
+                </div>
+                <div class="input-group" style="padding-bottom:10px;">
+                    <span class="input-group-addon" id="basic-addon2" style="width:100px;">密码:</span>
+                    <input type="password" placeholder="输入要使用的密码" id="password" class="form-control" aria-describedby="basic-addon2" style="width:300px;" />
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-lg btn-primary " value="signin" onclick="UserEvent(this);">登陆</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- for reg dialog -->
+<div class="modal" id="signup">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close"
+                 data-dismiss="modal" onclick="clsDialog();">
+                 <span>×</span>
+                 </button>
+                <h4 class="modal-title">会员注册</h4>
+            </div>
+            <div class="modal-body" style="padding-left: 100px;">
+                <div class="input-group" style="padding-bottom:10px;">
+                    <span class="input-group-addon" id="basic-addon1" style="padding-bottom:10px;width:100px;">用户名:</span>
+                    <input type="text" class="form-control" id="username" aria-describedby="basic-addon1" placeholder="输入要注册的用户名..."  style="width:300px;" />
+                </div>
+                <div class="input-group" style="padding-bottom:10px;">
+                    <span class="input-group-addon" id="basic-addon2" style="width:100px;">密码:</span>
+                    <input type="password" placeholder="输入要使用的密码" id="password" class="form-control" aria-describedby="basic-addon2" style="width:300px;" />
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-lg btn-primary " value="signup" onclick="UserEvent(this);">注册</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $('document').ready(function () {
+        checkLogin();
+    })
+
+    function showDlg(ths) {
+        var dlgName = $(ths).attr('value');
+        $('#'+dlgName).addClass('show');
+    }
+
+    function clsDialog() {
+        $('.show').removeClass('show');
+    }
+
+    function UserEvent(ths) {
+        var eventType = $(ths).attr('value');
+        if(eventType=='signin'){
+            methodUrl='/webchat/login/';
+        }else if(eventType=='signup'){
+            methodUrl='/webchat/reg/';
+        }
+        var username = $('#'+eventType).find('#username').val();
+        var password = $('#'+eventType).find('#password').val();
+        data = {
+            'username':username,
+            'password':password
+        };
+        //start request data
+        subEvent('post',methodUrl,data);
+    }
+</script>
+<script src="{% static 'chat/js/public.js' %}"></script>
+{% block content %}{% endblock %}
+{% block js %}{% endblock %}
+</body>
+</html>
