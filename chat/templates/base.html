@@ -7,24 +7,25 @@
 <script src="{% static 'chat/js/jquery-3.3.1.min.js' %}"></script>
 <script src="{% static 'chat/bootstrap3/js/bootstrap.min.js' %}"></script>
 <script src="{% static 'chat/js/jquery.cookie.js' %}"></script>
-    {% block title %}<title>base</title>{% endblock %}
+<script src="{% static 'chat/js/public.js' %}"></script>
+    {% block title %}<title>Anonymous</title>{% endblock %}
     {% block css %}{% endblock %}
 </head>
 <body>
 <nav class="navbar navbar-default">
     <ul class="nav navbar-nav">
-        <!--<li><a href="#">Home</a></li>
-        <li><a href="#">Program</a></li>-->
-        <li class="active"><a href="#">webChat</a></li>
+        <!--<li><a href="javascript:void(0);">Home</a></li>
+        <li><a href="javascript:void(0);">Program</a></li>-->
+        <li class="active"><a href="javascript:void(0);">webChat</a></li>
         </ul>
     <ul id="signs" class="nav navbar-nav navbar-right" style="padding-right: 50px;">
-        <li ><a href="#" onclick="showDlg(this);" value="signin">登陆</a></li>
-        <li ><a href="#" onclick="showDlg(this);" value="signup">注册</a></li>
+        <li ><a href="javascript:void(0);" onclick="showDlg(this);" value="signin">登陆</a></li>
+        <li ><a href="javascript:void(0);" onclick="showDlg(this);" value="signup">注册</a></li>
     </ul>
 </nav>
 <div class="modal" id="signin">
     <!-- for login dialog -->
-    <div class="modal-dialog">
+    <div class="modal-dialog" id="id_signin">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close"
@@ -40,19 +41,20 @@
                 </div>
                 <div class="input-group" style="padding-bottom:10px;">
                     <span class="input-group-addon" id="basic-addon2" style="width:100px;">密码:</span>
-                    <input type="password" placeholder="输入要使用的密码" id="password" class="form-control" aria-describedby="basic-addon2" style="width:300px;" />
+                    <input type="password" placeholder="输入要使用的密码" onblur="rmInpStyle();" id="password" class="form-control" aria-describedby="basic-addon2" style="width:300px;" />
                 </div>
             </div>
 
             <div class="modal-footer">
-                <button class="btn btn-lg btn-primary " value="signin" onclick="UserEvent(this);">登陆</button>
+                <div id="signin_noties" class="alert" style="width:150px;display: inline-block"><strong></strong></div>
+                <button class="btn btn-lg btn-primary "  value="signin" onclick="UserEvent(this);">登陆</button>
             </div>
         </div>
     </div>
 </div>
 <!-- for reg dialog -->
 <div class="modal" id="signup">
-    <div class="modal-dialog">
+    <div class="modal-dialog" id="id_signup">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close"
@@ -63,21 +65,27 @@
             </div>
             <div class="modal-body" style="padding-left: 100px;">
                 <div class="input-group" style="padding-bottom:10px;">
+                    <span class="input-group-addon" id="basic-addon1" style="padding-bottom:10px;width:100px;">用户昵称:</span>
+                    <input type="text" class="form-control" id="user" aria-describedby="basic-addon1" placeholder="输入要注册的用户名..."  style="width:300px;" />
+                </div>
+                <div class="input-group" style="padding-bottom:10px;">
                     <span class="input-group-addon" id="basic-addon1" style="padding-bottom:10px;width:100px;">用户名:</span>
                     <input type="text" class="form-control" id="username" aria-describedby="basic-addon1" placeholder="输入要注册的用户名..."  style="width:300px;" />
                 </div>
                 <div class="input-group" style="padding-bottom:10px;">
                     <span class="input-group-addon" id="basic-addon2" style="width:100px;">密码:</span>
-                    <input type="password" placeholder="输入要使用的密码" id="password" class="form-control" aria-describedby="basic-addon2" style="width:300px;" />
+                    <input type="password" placeholder="输入要使用的密码" onblur="rmInpStyle();" id="password" class="form-control" aria-describedby="basic-addon2" style="width:300px;" />
                 </div>
             </div>
 
             <div class="modal-footer">
+                <div id="signup_noties" class="alert" style="width:150px;display: inline-block"><strong></strong></div>
                 <button class="btn btn-lg btn-primary " value="signup" onclick="UserEvent(this);">注册</button>
             </div>
         </div>
     </div>
 </div>
+{% csrf_token %}
 <script>
     $('document').ready(function () {
         checkLogin();
@@ -101,15 +109,24 @@
         }
         var username = $('#'+eventType).find('#username').val();
         var password = $('#'+eventType).find('#password').val();
+        var user = $('#'+eventType).find('#user').val();
         data = {
+            'user':user,
             'username':username,
             'password':password
         };
         //start request data
+        $('#signup_noties,#signin_noties').removeClass('alert-danger').text('');
+        $('#id_signup .input-group,#id_signin .input-group').removeClass('has-error');
         subEvent('post',methodUrl,data);
     }
+    function rmInpStyle() {
+        
+        $('#id_signin .input-group,#id_signup .input-group,#id_info .input-group').removeClass('has-error');
+        $('#signin_noties,#signup_noties,#add_noties').text('');
+        $('#signin_noties,#signup_noties,#add_noties').removeClass('alert-danger').removeClass('alert-success')
+    }
 </script>
-<script src="{% static 'chat/js/public.js' %}"></script>
 {% block content %}{% endblock %}
 {% block js %}{% endblock %}
 </body>

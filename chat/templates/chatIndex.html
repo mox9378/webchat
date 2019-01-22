@@ -18,13 +18,13 @@
         <div class="row">
             <div class="col-sm-3" id="contact" class="dia_cfg" style="border:1px solid gainsboro;border-radius:5px;margin: 0;padding: 0;">
                 <div style="width: 100%;height: 40px;margin:0;padding:0;" id="chat_type">
-                    <a class="btn btn-default active" style="display: inline-block;width:33%;height: 100%;float: left">Contact</a>
-                    <a class="btn btn-default" style="display: inline-block;width:33%;height: 100%;float: left;">Group</a>
+                    <a class="btn btn-default active" style="display: inline-block;width:33%;height: 100%;float: left"><span>Contact</span>&nbsp;<span id="ctotal" class="badge"></span></a>
+                    <a class="btn btn-default" style="display: inline-block;width:33%;height: 100%;float: left;"><span>Group</span>&nbsp;<span id="gtotal" class="badge"></span></a>
                     <a class="btn btn-default" style="display: inline-block;width:34%;height: 100%;float: left;">All</a>
                 </div>
                 <div class="list-group" id="contact_list">
                     {% for item in contact_list %}
-                        <a href="javascript:void(0)" class="list-group-item"><span class="badge"></span><span>{{ item.username }}</span><span class="hide" uid="{{ item.id }}"></span></a>
+                        <a href="javascript:void(0)" class="list-group-item"><span class="badge" id="{{ item.id }}_tips"></span><span>{{ item.username }}</span><span class="hide" uid="{{ item.id }}"></span></a>
                     {% endfor %}
                 </div>
                 <div class="list-group hide" id="group_list">
@@ -60,17 +60,42 @@
         </div>
     </div>
     <div class="clearboth"></div>
+    <div class="modal" id="info_dlg">
+        <div class="modal-dialog" id="id_info">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close"
+                            data-dismiss="modal" onclick="clsDialog();">
+                        <span>×</span>
+                    </button>
+                    <h4 class="modal-title">Information</h4>
+                </div>
+                <div class="modal-body" style="padding-left: 100px;">
+                    <div class="input-group" style="padding-bottom:10px;">
+                        <span class="hide" id="add_id" ></span>
+                        <div id="information" style="width: 200px;text-align: center;margin:20px 0 0 100px;" class='alert alert-success'></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div id="add_noties" class="alert" style="width:150px;display: inline-block"><strong></strong></div>
+                    <button class="btn btn-lg btn-primary " value="signup" onclick="addUser(this);">Add as friends</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block js %}
     <script>
+        var Global_Msg = {};
+        MsgNumber=0;
         //document ready
         $('document').ready(function () {
-            refresh();
             $($("#chat_type a")[0]).addClass('active');
             $($("#chat_type a")[0]).addClass('btn-info');
             $("#chat_type a").click(function () {
-                var type = $(this).text();
+                var type = $(this).find('span:first-child').text();
+                
                 var obj = $("#chat_type a");
                 $("#chat_type a").removeClass('active');
                 $("#chat_type a").removeClass('btn-info');
@@ -96,66 +121,175 @@
                     var msg_text = $('textarea').val();
                     if($.trim(msg_text).length > 0){
                         var dated = new Date();
-                        txt = "<div style='text-align:center;'><span>"+dated.getFullYear()+'-'+(dated.getMonth()+1)+'-'+dated.getDate()+' '+dated.getHours()+':'+dated.getMinutes()+':'+dated.getSeconds()+"</span><br/></div><div style='text-align:right;'><span class=''>&nbsp;</span><div class='label label-warning' style='font-size:16px;'>"+msg_text+"</div></div>";
-                        $('#talked').append(txt);
+                        txt = "<div style='text-align:center;'><span>"+dated.getFullYear()+'-'+(dated.getMonth()+1)+'-'+dated.getDate()+' '+dated.getHours()+':'+dated.getMinutes()+':'+dated.getSeconds()+"</span><br/></div><div style='text-align:right;'><span class=''>&nbsp;</span><div class='label label-warning' id='Msg_"+MsgNumber+"' style='font-size:16px;'>"+msg_text+"</div></div>";
+                        //$('#talked').append(txt);
                         $('textarea').val('');
-                        sendMsg(null,msg_text);
+                        c_time = new Date();
+                        c_time = c_time.getFullYear() + "-" + (c_time.getMonth() + 1) + "-" + c_time.getDay() + "\n" + c_time.getHours() + ":" + c_time.getMinutes() + ":" + c_time.getSeconds()
+                        fid = $('#contact_list a.active span:last-child,#group_list a.active span:last-child').attr('uid');
+                        uid = $.cookie('uid');
+                        sendMsg(uid,fid,msg_text,MsgNumber++,c_time);
                     }
                     $("#talked").animate({
                     "scrollTop":$('#talked')[0].scrollHeight},500);
                 }
             });
-            setInterval(getMsg,10000);
-        })
-        
-        
-    function updateMsgTips(response) {
-        console.log(response);
-    }
-    function getMsg() {
-        $.ajax({
-                url:'/webchat/getMsg/',
-                type:'post',
-                data:{},
-                success:function (response) {
-                    //success
-                },
-                error:function (response) {
-                    //error, timeout
+            if($.cookie('is_logind')){
+                setTimeout(refresh,1000);
+                //setTimeout(getMsg,1500);
+                setTimeout(getMsg,2000);
+            };
+        });
 
+    function totalNoties() {
+        clist = $('#contact_list a span:first-child');
+        glist = $('#group_list a span:first-child');
+        ctotal=0;
+        gtotal=0;
+        for(var i=0;i<clist.length;i++){
+            ctotal+=Number($(clist[i]).text());
+        }
+        $('#ctotal').text(ctotal);
+        for(var i=0;i<glist.length;i++){
+            gtotal+=Number($(glist[i]).text());
+        }
+        
+        $('#gtotal').text(gtotal);
+    }
+
+    function getMsg(response) {
+        if(response){
+            flag = response['flag'];
+            if(flag){
+                message = response['message'];
+                pk = Number(message['pk']);
+                uid = Number(message['uid']);
+                fid = Number(message['fid']);
+                msgid = Number(message['msgid']);
+                eleid='#'+message['uid']+'_tips';
+                count= $(eleid).text();
+                count++;
+                selid =  $('#contact_list a.active span:last-child,#group_list a.active span:last-child').attr('uid');
+                if(Global_Msg[pk] == undefined){
+                    Global_Msg[pk] = Array();
                 }
-
-
-            })
+                if(selid && uid == Number(selid)){
+                    $('#'+uid+'_tips').text('');
+                    Global_Msg[pk].push(message);
+                    showChat(pk);
+                }else{
+                    Global_Msg[pk].push(message);
+                     $('#'+uid+'_tips').text(count);
+                }
+                totalNoties();
+            }
+        }
+        url='/webchat/getMsg/';
+        data={};
+        subEvent('post',url,data);
     }
+
+    function showChat(pk){
+            //fid = Number($('#contact_list a.active span:last-child,#group_list a.active span:last-child').attr('uid'));
+            $('#talked').html('');
+            if(Boolean(Global_Msg[pk]) == false){
+                Global_Msg[pk]=Array();
+            }
+            for(var i=0;i < Global_Msg[pk].length;i++){
+                
+                if (Global_Msg[pk][i]['EventType'] == '0') {
+                    if (Global_Msg[pk][i]['uid'] == $.cookie('uid')) {
+                        txt = "<div style='text-align:center;'><span>" + Global_Msg[pk][i]['c_time'] + "</span><br/></div><div style='text-align:right;'>"+Global_Msg[pk][i]['user']+"<br/></div><div style='text-align:right;'><span class=''>&nbsp;</span><div class='label label-success' id='Msg_" + Global_Msg[pk][i]['msgid'] + "' style='font-size:16px;'>" + Global_Msg[pk][i]['msg'] + "</div>&nbsp;<span class='glyphicon glyphicon-user'></span></div>";
+                    } else {
+                        txt = "<div style='text-align:center;'><span>" + Global_Msg[pk][i]['c_time'] + "</span><br/></div><div style='text-align:left;'>"+Global_Msg[pk][i]['user']+"<br/></div><div style='text-align:left;'><span class=''>&nbsp;</span><span class='glyphicon glyphicon-user'></span>&nbsp;<div class='label label-primary' id='Msg_" + Global_Msg[pk][i]['msgid'] + "' style='font-size:16px;'>" + Global_Msg[pk][i]['msg'] + "</div></div>";
+                    }
+                    $('#talked').append(txt);
+                }else{
+                    if (Global_Msg[pk][i]['ffid'] == $.cookie('uid')) {
+                        txt = "<div style='text-align:center;'><span>" + Global_Msg[pk][i]['c_time'] + "</span><br/></div><div style='text-align:right;'>"+Global_Msg[pk][i]['user']+"<br/></div><div style='text-align:right;'><span class=''>&nbsp;</span><div class='label label-success' id='Msg_" + Global_Msg[pk][i]['msgid'] + "' style='font-size:16px;'>" + Global_Msg[pk][i]['msg'] + "</div>&nbsp;<span class='glyphicon glyphicon-user'></span></div>";
+                    } else {
+                        txt = "<div style='text-align:center;'><span>" + Global_Msg[pk][i]['c_time'] + "</span><br/></div><div style='text-align:left;'>"+Global_Msg[pk][i]['user']+"<br/></div><div style='text-align:left;'><span class=''>&nbsp;</span><span class='glyphicon glyphicon-user'></span>&nbsp;<div class='label label-primary' id='Msg_" + Global_Msg[pk][i]['msgid'] + "' style='font-size:16px;'>" + Global_Msg[pk][i]['msg'] + "</div></div>";
+                    }
+                    $('#talked').append(txt);
+                }
+            }
+            totalNoties();
+    }
+
     function SelObj(ths) {
          var name = $($(ths).find('span')[1]).text();
         $('#contact_list a,#group_list a,#people_list a').removeClass('active');
         $(ths).addClass('active');
         $($('#chat_dialog').find('.panel-heading')[0]).text('正在与 '+name+' 聊天...')
-        $('textarea').removeAttr('disabled')
+        $('textarea').removeAttr('disabled');
+        fid = Number($('#contact_list a.active span:last-child,#group_list a.active span:last-child').attr('uid'));
+        uid = Number($.cookie('uid'));
+        $('#'+fid+'_tips').text('');
+        showChat(uid+fid);
      }
     //send msg
-    function sendMsg(response,msg){
-            //send message to server
-        if(response){
-            if(response['flag']){
-                $('#talked div:last-child div').removeClass('label-warning');
-                $('#talked div:last-child div').addClass('btn-info');
-                //glyphicon glyphicon-ok
-                $('#talked div:last-child span').addClass('glyphicon glyphicon-ok');
-            }
-        }else{
-            methodUrl='/webchat/sendmsg/';
-            data = {
-
-                'from':$.cookie('uid'),
-                'to':$($('#contact_list').find('.active').find('span')[2]).attr('uid'),
-                'msg':msg
-            };
-            subEvent('post',methodUrl,data);
+    function sendMsg(uid,fid,msg,msgid){
+        //send message to server
+        flag = $('#chat_type .active span:first-child').text();
+        methodUrl = '/webchat/sendmsg/';
+        var datas = {
+            'uid': uid.replace(/\s+/g,""),
+            'fid': fid.replace(/\s+/g,""),
+            'msg': msg.replace(/\s+/g,""),
+            'msgid': msgid,
+        };
+        var EventType = '';
+        if (flag == 'Contact') {
+            datas['EventType'] = 0;
+        } else {
+            datas['EventType'] = 1;
+            datas['uid'] = fid;
+            datas['fid'] = uid;
         }
 
+        $.ajax({
+            url: '/webchat/sendMsg/',
+            type: 'post',
+            data: datas,
+            success: function (response) {
+                response = JSON.parse(response)
+                if (response) {
+                    if (Boolean(response['flag']) == true) {
+                        message = response['message'];
+                        pk = Number(message['pk']);
+                        uid = Number(message['uid']);
+                        fid = Number(message['fid']);
+                        msgid = Number(message['msgid']);
+                        eventtype =  Number(message['EventType']);
+                        if(eventtype==0){
+                            message['pk'] = pk;
+                            message['uid'] =uid;
+                            message['fid'] = fid;
+                            message['msgid'] = msgid;
+                            message['eventtype'] = eventtype;
+                            message['user']='Me';
+                            Global_Msg[pk].push(message);
+
+                            showChat(pk);
+                        }
+
+                    }
+                }
+            },
+            error: function (response) {
+                response = JSON.parse(response)
+                message = response['message'];
+                pk = Number(message['pk']);
+                uid = Number(message['uid']);
+                fid = Number(message['fid']);
+                msgid = Number(message['msgid']);
+                message['pk'] = pk;
+                message['uid'] = uid;
+                message['fid'] = fid;
+                message['msgid'] = msgid;
+                sendMsg(uid,fid,message['msg'],msgid,message['c_time']);
+            }
+        })
     }
 
     // refresh contact/group/all
@@ -166,25 +300,66 @@
             group_list = response['group_list'];
             people_list = response['people_list'];
             for(var i=0;i<contact_list.length;i++){
-                tmp = '<a href="javascript:void(0)" class="list-group-item" onclick="SelObj(this);"><span class="badge"></span><span>'+contact_list[i]['username']+'</span><span class="hide" uid="'+contact_list[i]['id']+'"></span></a>';
+                tmp = '<a href="javascript:void(0)" class="list-group-item" onclick="SelObj(this);"><span class="badge" id="'+contact_list[i]['id']+'_tips"></span><span>'+contact_list[i]['user']+'</span><span class="hide" uid="'+contact_list[i]['id']+'"></span></a>';
                 $('#contact_list').append(tmp);
             }
             for(var i=0;i<group_list.length;i++){
-                tmp = '<a href="javascript:void(0)" class="list-group-item" onclick="SelObj(this);"><span class="badge"></span><span>'+group_list[i]['group_name']+'</span><span class="hide" uid="'+group_list[i]['id']+'"></span></a>';
+                tmp = '<a href="javascript:void(0)" class="list-group-item" onclick="SelObj(this);"><span class="badge" id="'+group_list[i]['id']+'_tips"></span><span>'+group_list[i]['group_name']+'</span><span class="hide" uid="'+group_list[i]['id']+'"></span></a>';
                 $('#group_list').append(tmp);
             }
             for(var i=0;i<people_list.length;i++){
-                tmp = '<a href="javascript:void(0)" class="list-group-item" onclick="Detail(this);"><span class="badge"></span><span>'+people_list[i]['username']+'</span><span class="hide" uid="'+people_list[i]['id']+'"></span></a>';
+                tmp = '<a href="javascript:void(0)" class="list-group-item" onclick="Detail(this);"><span class="badge" id="'+people_list[i]['id']+'_tips"></span><span>'+people_list[i]['user']+'</span><span class="hide" uid="'+people_list[i]['id']+'"></span></a>';
                 $('#people_list').append(tmp);
             }
-            //<a href="javascript:void(0)" class="list-group-item"><span class="badge"></span><span>{{ item.username }}</span><span class="hide" uid="{{ item.id }}"></span></a>
         }else{
             methodUrl = '/webchat/refresh/';
             data={};
             subEvent('post',methodUrl,data);
         }
+        totalNoties();
+    }
 
+    //detail func
+    function Detail(ths) {
+        rmInpStyle();
+        $('#info_dlg').addClass('show')
+        $('#information').text($($(ths).find('span')[1]).text());
+        $('#add_id').text($($(ths).find('span')[2]).attr('uid'));
+    }
 
+    $.ajaxSetup({
+            data: {csrfmiddlewaretoken: $.cookie('csrftoken') }
+    });
+
+    function addUser() {
+        //$('#id_info .input-group').removeClass('has-error');
+        //$('#add_noties').addClass('alert-success').text('');
+        rmInpStyle();
+        methodUrl = '/webchat/adduser/';
+        datas = {
+            'fid':$('#add_id').text(),
+        };
+        $.ajax({
+            url:methodUrl,
+            type:'post',
+            data:datas,
+            success:function (response) {
+                res = JSON.parse(response);
+                flag = res['flag'];
+                if(Boolean(flag)){
+                    $('#add_noties').addClass('alert-success')
+                    $('#add_noties').text('add done!');
+                    setTimeout(clsDialog,1000);
+                    setTimeout(refresh,1500);
+                }else{
+                    $('#add_noties').addClass('alert-danger')
+                    $('#add_noties').text('add fail!');
+                }
+            },
+            error:function (response) {
+                $('#add_noties').addClass('alert-danger').text('add fail!');
+            }
+        })
     }
     </script>
 
